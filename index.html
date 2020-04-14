@@ -1,85 +1,123 @@
 <?php
-        error_reporting(0);
-        session_start();
+require './common/service.php';
 
-        if($_SESSION['id']!= null){
-            header('Location: index.php');
-        }
+$service = new NoteService();
 
-    ?>
+session_start();
+
+    if($_SESSION['id'] == null){
+        header('Location: index.php');
+    }
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login Here!</title>
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
+  <title>Notes app</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./static/css/style.css">
 </head>
 
-<body class="text-center">
-    <div class="container mt-5">
-        <form class="form-signin ml-5 mr-5" method="POST">
-            <img class="mb-5" src="https://pngimage.net/wp-content/uploads/2018/06/icon-manusia-png-7.png" alt=""
-                width="150" height="150">
-            <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
-            <label for="inputEmail" class="sr-only">Username</label>
-            <input type="text" name="username" id="inputEmail" class="form-control" placeholder="Username" required
-                autofocus>
-            <label for="inputPassword" class="sr-only">Password</label>
-            <input type="password" name="pass" id="inputPassword" class="form-control" placeholder="Password" required>
-            <div class="checkbox mb-3">
-                <label>
-                    <input type="checkbox" value="remember-me"> Remember me
-                </label>
-            </div>
-            <button class="btn btn-lg btn-primary btn-block" name="submit" type="submit">Sign in</button><br>
-            <a href="actions/register.php">Register Here!</a>
-            <p class="mt-5 mb-3 text-muted">&copy;2019</p>
-        </form>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo01"
+        aria-controls="navbarTogglerDemo01" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarTogglerDemo01">
+        <a class="navbar-brand" href="#">Notes</a>
+        <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+          <li class="nav-item active">
+            <a class="nav-link" href="about.php">About <span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="actions/logout.php">Logout</a>
+          </li>
+        </ul>
+      </div>
     </div>
+  </nav>
 
-    <?php
-            $id = 'mufti';
-            $password = '123';
-            if(isset($_POST['submit'])){
-                $nama = $_POST['username'];
-                $pass = $_POST['pass'];
-                if($id == $nama && $password == $pass){
-                    
-                    // TODO Untuk sett session 'id'
-                    $_SESSION['id'] = $id;
-                    
-                    header('Location: utama.php');
-                }
-            }
+  <div class="row">
+    <?php foreach ($service->all() as $row) : ?>
+      <?php $isHaveColor = $row['color'] != '' ? 'white-text' : ''; ?>
 
-            // require 'common/service.php';
+      <div class="col-6">
+        <div class="card <?= $row['color'] ?>">
+          <div class="card-content click-able <?= $isHaveColor ?>" onclick="show(<?= $row['id'] ?>)">
+            <div class="card-title"><?= $row['title'] ?? '' ?></div>
+            <p><?= $row['note'] ?></p>
+          </div>
+          <div class="card-action">
+            <div class="click-able" onclick="remove(<?= $row['id'] ?>, '<?= $row['title'] ?>')">
+              <i class="material-icons <?= $isHaveColor ?>">delete</i>
+            </div>
 
-            // $service = new NoteService();
+            <form class="delete-form" action="actions/delete.php">
+              <input type="hidden" name="id" class="form-delete-id">
+            </form>
+            <a href="actions/edit.php" class="card-link"><b>Edit</b></a>
+          </div>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
 
-            // $username = $_POST['username'];
-            // $password = $_POST['pass'];
+  <div class="fixed-action-btn" onclick="add()">
+    <button class="btn-floating btn-large primary">
+      <i class="large material-icons">add</i>
+    </button>
+  </div>
 
-            // if(!empty($username && !empty($password))){
-            //     $query = mysqli_query($conn, "SELECT * FROM pengguna WHERE username='$username' and pass='$password'");
-            //     $result = mysqli_num_rows($query);
-            //     if($result){
-            //         header('Location: utama.php');
-            //     }
-            // }
-            
-        ?>
+  <div class="modal">
+    <form action="actions/store-or-update.php">
+      <div class="modal-content">
+        <input id="id" name="id" type="hidden">
+        <div class="row-1 ">
+          <div class="input-field col s10">
+            <!-- <label for="title">Title</label> -->
+            <input id="title" name="title" type="text" placeholder="Title" required>
+          </div>
+          <div class="input-field col s2">
+            <select name="color" id="color">
+              <option value="">White</option>
+              <option value="black darken-1">Red</option>
+              <option value="orange darken-1">Orange</option>
+              <option value="yellow darken-1">Yellow</option>
+              <option value="green darken-1">Green</option>
+              <option value="teal darken-1">Teal</option>
+              <option value="light-blue darken-1">Light Blue</option>
+              <option value="blue darken-1">Blue</option>
+              <option value="amber darken-1">Amber</option>
+            </select>
+            <!-- <label>Color</label> -->
+          </div>
+        </div>
+        <div class="input-field col s12">
+          <!-- <label for="note">Note</label> -->
+          <textarea id="note" name="note" class="materialize-textarea" placeholder="Note" rows="4" cols="100" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="waves-effect waves-light btn-flat modal-close">Cancel</button>
+        <button type="submit" class="waves-effect btn primary">Save</button>
+      </div>
+    </form>
+  </div>
 
-    <script src="js/jquery-3.4.1.min.js"></script>
-    <script src="js/popper.min.js"></script>
-    <script src="js/bootstrap.min.js"></script>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="./static/js/app.js"></script>
 </body>
 
 </html>
